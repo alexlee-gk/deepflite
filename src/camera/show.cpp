@@ -28,36 +28,36 @@ namespace ptime = boost::posix_time;
 namespace pt = boost::property_tree;
 
 void setupCameraSettings(int device_id, int exposure, int gain, int brightness) {
-    // manually setting camera exposure settings; OpenCV/v4l1 doesn't
-    // support exposure control; so here we manually use v4l2 before
-    // opening the device via OpenCV; confirmed to work with Logitech
-    // C270; try exposure=20, gain=100, brightness=150
+	// manually setting camera exposure settings; OpenCV/v4l1 doesn't
+	// support exposure control; so here we manually use v4l2 before
+	// opening the device via OpenCV; confirmed to work with Logitech
+	// C270; try exposure=20, gain=100, brightness=150
 
-    string video_str = "/dev/video" + boost::lexical_cast<string>(device_id);
+	string video_str = "/dev/video" + boost::lexical_cast<string>(device_id);
 
-    int device = v4l2_open(video_str.c_str(), O_RDWR | O_NONBLOCK);
+	int device = v4l2_open(video_str.c_str(), O_RDWR | O_NONBLOCK);
 
-    if (exposure >= 0) {
-        // not sure why, but v4l2_set_control() does not work for
-        // V4L2_CID_EXPOSURE_AUTO...
-        struct v4l2_control c;
-        c.id = V4L2_CID_EXPOSURE_AUTO;
-        c.value = 1; // 1=manual, 3=auto; V4L2_EXPOSURE_AUTO fails...
-        if (v4l2_ioctl(device, VIDIOC_S_CTRL, &c) != 0) {
-            cout << "Failed to set... " << strerror(errno) << endl;
-        }
-        cout << "exposure: " << exposure << endl;
-        v4l2_set_control(device, V4L2_CID_EXPOSURE_ABSOLUTE, exposure*6);
-    }
-    if (gain >= 0) {
-        cout << "gain: " << gain << endl;
-        v4l2_set_control(device, V4L2_CID_GAIN, gain*256);
-    }
-    if (brightness >= 0) {
-        cout << "brightness: " << brightness << endl;
-        v4l2_set_control(device, V4L2_CID_BRIGHTNESS, brightness*256);
-    }
-    v4l2_close(device);
+	if (exposure >= 0) {
+		// not sure why, but v4l2_set_control() does not work for
+		// V4L2_CID_EXPOSURE_AUTO...
+		struct v4l2_control c;
+		c.id = V4L2_CID_EXPOSURE_AUTO;
+		c.value = 1; // 1=manual, 3=auto; V4L2_EXPOSURE_AUTO fails...
+		if (v4l2_ioctl(device, VIDIOC_S_CTRL, &c) != 0) {
+			cout << "Failed to set... " << strerror(errno) << endl;
+		}
+		cout << "exposure: " << exposure << endl;
+		v4l2_set_control(device, V4L2_CID_EXPOSURE_ABSOLUTE, exposure*6);
+	}
+	if (gain >= 0) {
+		cout << "gain: " << gain << endl;
+		v4l2_set_control(device, V4L2_CID_GAIN, gain*256);
+	}
+	if (brightness >= 0) {
+		cout << "brightness: " << brightness << endl;
+		v4l2_set_control(device, V4L2_CID_BRIGHTNESS, brightness*256);
+	}
+	v4l2_close(device);
 }
 
 void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture* capture, cv::VideoWriter* writter, vector<string>& timestamps) {
@@ -93,27 +93,27 @@ int main(int argc, char* argv[]) {
 	string output;
 	po::options_description desc("Allowed options");
 	desc.add_options()
-		("help", "produce help message")
-	    ("ids", po::value< vector<int> >(&device_ids))
-		("width,w", po::value<int>(&width)->default_value(1280))
-		("height,h", po::value<int>(&height)->default_value(720))
-		("fps", po::value<double>(&fps)->default_value(30.0))
-		("exposure", po::value<int>(&exposure)->default_value(-1))
-		("gain", po::value<int>(&gain)->default_value(-1))
-		("brightness", po::value<int>(&brightness)->default_value(-1))
-		("output,o", po::value<string>(&output), "base name for output files")
-	;
+				("help", "produce help message")
+				("ids", po::value< vector<int> >(&device_ids))
+				("width,w", po::value<int>(&width)->default_value(1280))
+				("height,h", po::value<int>(&height)->default_value(720))
+				("fps", po::value<double>(&fps)->default_value(30.0))
+				("exposure", po::value<int>(&exposure)->default_value(-1))
+				("gain", po::value<int>(&gain)->default_value(-1))
+				("brightness", po::value<int>(&brightness)->default_value(-1))
+				("output,o", po::value<string>(&output), "base name for output files")
+				;
 	po::positional_options_description p;
 	p.add("ids", -1);
 
 	po::variables_map vm;
 	po::store(po::command_line_parser(argc, argv).
-	          options(desc).positional(p).run(), vm);
+			options(desc).positional(p).run(), vm);
 	po::notify(vm);
 
 	if (vm.count("help")) {
-	    cout << desc << endl;
-	    return 1;
+		cout << desc << endl;
+		return 1;
 	}
 
 	// setup captures and writters
@@ -123,13 +123,13 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < device_ids.size(); i++) {
 		setupCameraSettings(device_ids[i], exposure, gain, brightness);
 		cv::VideoCapture capture(device_ids[i]);
-	    if (!capture.isOpened()) {
-	    	cout << "Cannot open video capture " << device_ids[i] << endl;
-	        return 1;
-	    }
-	    capture.set(CV_CAP_PROP_FRAME_WIDTH, width);
-	    capture.set(CV_CAP_PROP_FRAME_HEIGHT, height);
-	    capture.set(CV_CAP_PROP_FPS, fps);
+		if (!capture.isOpened()) {
+			cout << "Cannot open video capture " << device_ids[i] << endl;
+			return 1;
+		}
+		capture.set(CV_CAP_PROP_FRAME_WIDTH, width);
+		capture.set(CV_CAP_PROP_FRAME_HEIGHT, height);
+		capture.set(CV_CAP_PROP_FPS, fps);
 		captures.push_back(capture);
 
 		if (output.size()) {
@@ -165,10 +165,10 @@ int main(int argc, char* argv[]) {
 	int grid_width = (frames.size() < 3) ? 1 : 2;
 	int grid_height = (frames.size() < 2) ? 1 : 2;
 	cv::Mat all_image(grid_height*height, grid_width*width, CV_8UC3);
-    vector<AprilTags::TagDetection> detections;
-    vector<string> image_timestamps;
-    bool detect = false;
-    char key = (char) 0;
+	vector<AprilTags::TagDetection> detections;
+	vector<string> image_timestamps;
+	bool detect = false;
+	char key = (char) 0;
 	while (true) {
 		for (int i = 0; i < frames.size(); i++) {
 			frames[i].copyTo(image);
@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
 				detections = tag_detector.extractTags(image_gray);
 
 				// show the current image including any detections
-			    BOOST_FOREACH(const AprilTags::TagDetection &detection, detections) {
+				BOOST_FOREACH(const AprilTags::TagDetection &detection, detections) {
 					detection.draw(image);
 				}
 			}
