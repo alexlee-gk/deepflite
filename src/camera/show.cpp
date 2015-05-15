@@ -24,14 +24,16 @@ namespace po = boost::program_options;
 namespace ptime = boost::posix_time;
 namespace pt = boost::property_tree;
 
-void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture& capture, cv::VideoWriter& writter, vector<string>& timestamps) {
+void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture* capture, cv::VideoWriter* writter, vector<string>& timestamps) {
 	int i_frame = 0;
 	ptime::ptime last_t, t;
 	last_t = ptime::microsec_clock::local_time();
 	while (!done) {
-		capture >> frame;
+		(*capture) >> frame;
 		string timestamp = to_iso_extended_string(ptime::microsec_clock::local_time());
-		writter << frame;
+		if (writter) {
+			(*writter) << frame;
+		}
 		timestamps.push_back(timestamp);
 		// print out the frame rate at which image frames are being processed
 		i_frame++;
@@ -57,7 +59,7 @@ int main(int argc, char* argv[]) {
 		("width", po::value<int>(&width)->default_value(1280))
 		("height", po::value<int>(&height)->default_value(720))
 		("fps", po::value<double>(&fps)->default_value(30.0))
-		("output", po::value<string>(&output)->default_value(""), "base name for output files")
+		("output,o", po::value<string>(&output), "base name for output files")
 	;
 	po::positional_options_description p;
 	p.add("devices", -1);
@@ -68,7 +70,7 @@ int main(int argc, char* argv[]) {
 	po::notify(vm);
 
 	if (vm.count("help")) {
-	    cout << desc << "\n";
+	    cout << desc << endl;
 	    return 1;
 	}
 
@@ -86,15 +88,17 @@ int main(int argc, char* argv[]) {
 	    capture.set(CV_CAP_PROP_FPS, fps);
 		captures.push_back(capture);
 
-		string filename = output + "video" + boost::lexical_cast<string>(devices[i]) + ".avi";
-		cv::VideoWriter writter(filename, CV_FOURCC('M', 'J', 'P', 'G'), fps, cv::Size(width, height), true);
-		if (!writter.isOpened()) {
-			cout << "Cannot open video writter" << endl;
-			return -1;
-		}
-		writters.push_back(writter);
+		if (output.size()) {
+			string filename = output + "video" + boost::lexical_cast<string>(devices[i]) + ".avi";
+			cv::VideoWriter writter(filename, CV_FOURCC('M', 'J', 'P', 'G'), fps, cv::Size(width, height), true);
+			if (!writter.isOpened()) {
+				cout << "Cannot open video writter" << endl;
+				return -1;
+			}
+			writters.push_back(writter);
 
-		video_filenames.push_back(filename);
+			video_filenames.push_back(filename);
+		}
 	}
 
 	// start capture and write threads for each camera
@@ -108,7 +112,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < captures.size(); i++) {
 		frames.push_back(cv::Mat(height, width, CV_8UC3));
 		timestamps.push_back(vector<string>());
-		thread_group.add_thread(new boost::thread(captureAndWrite, boost::ref(done), i, frames[i], captures[i], writters[i], boost::ref(timestamps[i])));
+		thread_group.add_thread(new boost::thread(captureAndWrite, boost::ref(done), i, frames[i], &captures[i], (writters.size() > i) ? &writters[i] : NULL, boost::ref(timestamps[i])));
 	}
 
 	// main loop for visualization and interactive input
@@ -150,31 +154,33 @@ int main(int argc, char* argv[]) {
 	thread_group.join_all();
 
 	// save metadata
-	pt::ptree tree;
-	pt::ptree tvideos;
-	for (int i = 0; i < devices.size(); i++) {
-		pt::ptree tvideo;
-		tvideo.put("filename", video_filenames[i]);
+	if (output.size()) {
+		pt::ptree tree;
+		pt::ptree tvideos;
+		for (int i = 0; i < devices.size(); i++) {
+			pt::ptree tvideo;
+			tvideo.put("filename", video_filenames[i]);
+			pt::ptree ttimestamps;
+			BOOST_FOREACH(string &timestamp, timestamps[i]) {
+				pt::ptree ttimestamp;
+				ttimestamp.put("", timestamp);
+				ttimestamps.push_back(make_pair("", ttimestamp));
+			}
+			tvideo.add_child("timestamps", ttimestamps);
+			tvideos.push_back(make_pair("", tvideo));
+		}
+		tree.add_child("cameras.videos", tvideos);
+
 		pt::ptree ttimestamps;
-	    BOOST_FOREACH(string &timestamp, timestamps[i]) {
+		BOOST_FOREACH(string &timestamp, image_timestamps) {
 			pt::ptree ttimestamp;
 			ttimestamp.put("", timestamp);
 			ttimestamps.push_back(make_pair("", ttimestamp));
 		}
-	    tvideo.add_child("timestamps", ttimestamps);
-	    tvideos.push_back(make_pair("", tvideo));
-	}
-	tree.add_child("cameras.videos", tvideos);
+		tree.add_child("cameras.image_timestamps", ttimestamps);
 
-	pt::ptree ttimestamps;
-    BOOST_FOREACH(string &timestamp, image_timestamps) {
-		pt::ptree ttimestamp;
-		ttimestamp.put("", timestamp);
-		ttimestamps.push_back(make_pair("", ttimestamp));
+		pt::write_json(output + "info.json", tree);
 	}
-    tree.add_child("cameras.image_timestamps", ttimestamps);
-
-	pt::write_json(output + "info.json", tree);
 
 	return 0;
 }
