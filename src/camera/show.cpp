@@ -162,7 +162,9 @@ int main(int argc, char* argv[]) {
 	// main loop for visualization and interactive input
 	AprilTags::TagDetector tag_detector(AprilTags::tagCodes36h11);
 	cv::Mat image, image_gray;
-	cv::Mat all_image(2*height, 2*width, CV_8UC3);
+	int grid_width = (frames.size() < 3) ? 1 : 2;
+	int grid_height = (frames.size() < 2) ? 1 : 2;
+	cv::Mat all_image(grid_height*height, grid_width*width, CV_8UC3);
     vector<AprilTags::TagDetection> detections;
     vector<string> image_timestamps;
     bool detect = false;
@@ -180,7 +182,7 @@ int main(int argc, char* argv[]) {
 					detection.draw(image);
 				}
 			}
-			image.copyTo(all_image(cv::Rect((i%2) * width, (i/2) * height, width, height)));
+			image.copyTo(all_image(cv::Rect((i%grid_width) * width, (i/grid_width) * height, width, height)));
 		}
 		key = (char) cv::waitKey(1);
 		cv::imshow("image", all_image);
