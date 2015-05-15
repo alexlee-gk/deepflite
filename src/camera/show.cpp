@@ -165,6 +165,11 @@ int main(int argc, char* argv[]) {
 	int grid_width = (frames.size() < 3) ? 1 : 2;
 	int grid_height = (frames.size() < 2) ? 1 : 2;
 	cv::Mat all_image(grid_height*height, grid_width*width, CV_8UC3);
+	cv::namedWindow("image", cv::WINDOW_NORMAL);
+	int max_width = width;
+	int max_height = height;
+	double scale = min(((double) max_width)/(width*grid_width), ((double) max_height)/(height*grid_height));
+	cv::resizeWindow("image", scale*all_image.cols, scale*all_image.rows);
 	vector<AprilTags::TagDetection> detections;
 	vector<string> image_timestamps;
 	bool detect = false;
