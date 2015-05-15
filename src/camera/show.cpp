@@ -95,8 +95,8 @@ int main(int argc, char* argv[]) {
 	desc.add_options()
 		("help", "produce help message")
 	    ("ids", po::value< vector<int> >(&device_ids))
-		("width", po::value<int>(&width)->default_value(1280))
-		("height", po::value<int>(&height)->default_value(720))
+		("width,w", po::value<int>(&width)->default_value(1280))
+		("height,h", po::value<int>(&height)->default_value(720))
 		("fps", po::value<double>(&fps)->default_value(30.0))
 		("exposure", po::value<int>(&exposure)->default_value(-1))
 		("gain", po::value<int>(&gain)->default_value(-1))
@@ -116,6 +116,7 @@ int main(int argc, char* argv[]) {
 	    return 1;
 	}
 
+	// setup captures and writters
 	vector<cv::VideoCapture> captures;
 	vector<cv::VideoWriter> writters;
 	vector<string> video_filenames;
