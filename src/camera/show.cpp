@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < captures.size(); i++) {
 		frames.push_back(cv::Mat(height, width, CV_8UC3));
 		timestamps.push_back(vector<string>());
-		thread_group.add_thread(new boost::thread(captureAndWrite, boost::ref(done), i, frames[i], &captures[i], (writters.size() > i) ? &writters[i] : NULL, boost::ref(timestamps[i])));
+		thread_group.add_thread(new boost::thread(captureAndWrite, boost::ref(done), i, boost::ref(frames[i]), &captures[i], (writters.size() > i) ? &writters[i] : NULL, boost::ref(timestamps[i])));
 	}
 
 	// main loop for visualization and interactive input
