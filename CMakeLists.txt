@@ -3,7 +3,7 @@ project(deepflite)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
-find_package(Boost COMPONENTS thread program_options date_time REQUIRED)
+find_package(Boost COMPONENTS system thread program_options date_time REQUIRED)
 find_package(Eigen REQUIRED)
 find_package(OpenCV REQUIRED)
 
