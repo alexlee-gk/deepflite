@@ -22,6 +22,8 @@
 #include "AprilTags/TagDetector.h"
 #include "AprilTags/Tag36h11.h"
 
+#include "MavlinkInterface.h"
+
 using namespace std;
 namespace po = boost::program_options;
 namespace ptime = boost::posix_time;
@@ -159,6 +161,14 @@ int main(int argc, char* argv[]) {
 		thread_group.add_thread(new boost::thread(captureAndWrite, boost::ref(done), i, boost::ref(frames[i]), &captures[i], (writters.size() > i) ? &writters[i] : NULL, boost::ref(timestamps[i])));
 	}
 
+
+    // start capturing telemetry data
+    MavlinkInterface mav;
+    int baudrate = 57600;
+    mav.start("/dev/ttyUSB0", baudrate);
+    mav.request_data_stream(MAV_DATA_STREAM_ALL, 0, 0);
+    mav.request_data_stream(MAV_DATA_STREAM_RAW_SENSORS, 50, 1);
+
 	// main loop for visualization and interactive input
 	AprilTags::TagDetector tag_detector(AprilTags::tagCodes36h11);
 	cv::Mat image, image_gray;
@@ -201,7 +211,14 @@ int main(int argc, char* argv[]) {
 			done = true;
 			break;
 		}
+
+                cout << "hello" << endl;
 	}
+
+
+	// stop telemetry
+    mav.stop();
+
 	thread_group.join_all();
 
 	// save metadata
