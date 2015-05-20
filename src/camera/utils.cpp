@@ -117,7 +117,7 @@ string getCameraSerialNumberFromDeviceId(int device_id) {
 string getCameraSerialNumberFromId(string camera_id) {
 	string camera_serial_number;
 	try {
-		camera_serial_number = map<string, string> {{"A", "EE96593F"}, {"B", "E8FE493F"}, {"C", "C3D6593F"}}.at(camera_id);
+		camera_serial_number = map<string, string> {{"A", "EE96593F"}, {"B", "E8FE493F"}, {"C", "C3D6593F"}, {"D", "6ACE493F"}}.at(camera_id);
 	} catch (out_of_range& e) {
 		throw invalid_argument("Invalid camera id: " + camera_id);
 	}
@@ -127,7 +127,7 @@ string getCameraSerialNumberFromId(string camera_id) {
 string getCameraIdFromSerialNumber(string camera_serial_number) {
 	string camera_id;
 	try {
-		camera_id = map<string, string> {{"EE96593F", "A"}, {"E8FE493F", "B"}, {"C3D6593F", "C"}}.at(camera_serial_number);
+		camera_id = map<string, string> {{"EE96593F", "A"}, {"E8FE493F", "B"}, {"C3D6593F", "C"}, {"6ACE493F", "D"}}.at(camera_serial_number);
 	} catch (out_of_range& e) {
 		throw invalid_argument("Invalid camera serial number: " + camera_serial_number);
 	}
