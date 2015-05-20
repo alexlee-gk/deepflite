@@ -103,6 +103,7 @@ void MavlinkInterface::read_message() {
 
     // don't handle messages here. Just queue them.
     _msgs.push(message);
+    _timestamps.push(get_timestamp());
 //    cout << "Received message id " << message.msgid << endl;
     if(_debug)
         printf("Received message id %i\n", message.msgid);
@@ -193,7 +194,7 @@ void MavlinkInterface::write_file_thread() {
                 case MAVLINK_MSG_ID_RAW_IMU:
                     mavlink_raw_imu_t msg_imu;
                     mavlink_msg_raw_imu_decode(&_msgs.front(), &(msg_imu));
-                    fp_imu << get_timestamp() << " " << msg_imu.time_usec << " "
+                    fp_imu << _timestamps.front() << " " << msg_imu.time_usec << " "
                            << msg_imu.xacc  << " " << msg_imu.yacc  << " " << msg_imu.zacc  << " "
                            << msg_imu.xgyro << " " << msg_imu.ygyro << " " << msg_imu.zgyro << " "
                            << msg_imu.xmag  << " " << msg_imu.ymag  << " " << msg_imu.zmag  << endl;
@@ -201,7 +202,7 @@ void MavlinkInterface::write_file_thread() {
                 case MAVLINK_MSG_ID_GPS_RAW_INT:
                     mavlink_gps_raw_int_t msg_gps;
                     mavlink_msg_gps_raw_int_decode(&_msgs.front(), &(msg_gps));
-                    fp_gps << get_timestamp() << " " << msg_gps.time_usec << " " << (uint16_t)msg_gps.fix_type <<  " "
+                    fp_gps << _timestamps.front() << " " << msg_gps.time_usec << " " << (uint16_t)msg_gps.fix_type <<  " "
                            << msg_gps.lat << " " << msg_gps.lon << " " << msg_gps.alt << " "
                            << msg_gps.eph << " " << msg_gps.epv << " " << msg_gps.vel << " "
                            << msg_gps.cog << " " << (uint16_t)msg_gps.satellites_visible << endl;
@@ -209,15 +210,13 @@ void MavlinkInterface::write_file_thread() {
                 case MAVLINK_MSG_ID_SCALED_PRESSURE:
                     mavlink_scaled_pressure_t msg_p;
                     mavlink_msg_scaled_pressure_decode(&_msgs.front(), &msg_p);
-                    fp_pressure << get_timestamp() << " " << msg_p.time_boot_ms << " " << msg_p.press_abs << " "
+                    fp_pressure << _timestamps.front()<< " " << msg_p.time_boot_ms << " " << msg_p.press_abs << " "
                                 << msg_p.press_diff << " " << msg_p.temperature << endl;
                     break;
             }
             _msgs.pop();
-
-
+            _timestamps.pop();
         }
-
 
 
         usleep(1000000); // write cycle 1Hz

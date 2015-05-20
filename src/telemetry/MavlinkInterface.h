@@ -38,6 +38,7 @@ private:
 
 
     queue<mavlink_message_t> _msgs;
+    queue<long> _timestamps;
     bool _done;
     bool _debug;
 
