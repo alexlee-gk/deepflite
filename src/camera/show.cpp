@@ -175,7 +175,8 @@ int main(int argc, char* argv[]) {
 			}
 			image.copyTo(all_image(cv::Rect((i%grid_width) * width, (i/grid_width) * height, width, height)));
 		}
-		key = (char) cv::waitKey(1);
+                key = (char) cv::waitKey(1);
+
 		cv::imshow("image", all_image);
 		if (key == 'c') {
             image_timestamps.push_back(get_timestamp());
