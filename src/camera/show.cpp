@@ -146,7 +146,6 @@ int main(int argc, char* argv[]) {
     }
 
 	// main loop for visualization and interactive input
-	AprilTags::TagDetector tag_detector(AprilTags::tagCodes36h11);
 	cv::Mat image, image_gray;
 	int grid_width = (n_cameras < 3) ? 1 : 2;
 	int grid_height = (n_cameras < 2) ? 1 : 2;
@@ -156,6 +155,7 @@ int main(int argc, char* argv[]) {
 	int max_height = height;
 	double scale = min(((double) max_width)/(width*grid_width), ((double) max_height)/(height*grid_height));
 	cv::resizeWindow("image", scale*all_image.cols, scale*all_image.rows);
+	AprilTags::TagDetector tag_detector(AprilTags::tagCodes36h11);
 	vector<AprilTags::TagDetection> detections;
 	vector<long> image_timestamps;
 	bool detect = false;
@@ -175,8 +175,7 @@ int main(int argc, char* argv[]) {
 			}
 			image.copyTo(all_image(cv::Rect((i%grid_width) * width, (i/grid_width) * height, width, height)));
 		}
-                key = (char) cv::waitKey(1);
-
+		key = (char) cv::waitKey(1);
 		cv::imshow("image", all_image);
 		if (key == 'c') {
             image_timestamps.push_back(get_timestamp());
@@ -184,7 +183,7 @@ int main(int argc, char* argv[]) {
 		if (key == 'd') {
 			detect = !detect;
 		}
-		if (key == 'q') {
+		if (key == 'q' || key == 27) {
 			done = true;
 			break;
 		}
