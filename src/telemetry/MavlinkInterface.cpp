@@ -8,7 +8,9 @@ MavlinkInterface::MavlinkInterface(){
 MavlinkInterface::~MavlinkInterface(){}
 
 
-void MavlinkInterface::start(string uart_name, int baudrate){
+void MavlinkInterface::start(string uart_name, int baudrate, string file_prefix){
+    _file_prefix = file_prefix;
+
 
     cout << "Mavlink: Open serial port" << endl;
 
@@ -152,36 +154,18 @@ void MavlinkInterface::read_messages_thread() {
 void MavlinkInterface::write_file_thread() {
 
     // current time string
-    time_t now = time(0);
-    struct tm tstruct;
-    char datebuf[100];
-    tstruct  = *localtime(&now);
-    strftime(datebuf, sizeof(datebuf), "%Y-%m-%d-%H.%M.%S", &tstruct);
 
-
-    char fileprefix[100];
-    strcpy(fileprefix, "./data/");
-    strcat(fileprefix, datebuf);
-
-    char imufilename[100];
-    char gpsfilename[100];
-    char pressurefilename[100];
-
-    strcat(strcpy(imufilename, fileprefix), "_IMU.txt");
-    strcat(strcpy(gpsfilename, fileprefix), "_GPS.txt");
-    strcat(strcpy(pressurefilename, fileprefix), "_pressure.txt");
+    string file_name = _file_prefix;
 
     ofstream fp_imu, fp_gps, fp_pressure;
-    fp_imu.open(imufilename);
-    fp_gps.open(gpsfilename);
-    fp_pressure.open(pressurefilename);
-
+    fp_imu.open((file_name + "_IMU.log").c_str());
+    fp_gps.open((file_name + "_GPS.log").c_str());
+    fp_pressure.open((file_name + "_barometer.log").c_str());
 
     // write the header
     fp_imu << "GCS_time timestamp xacc yacc zacc xgyro ygyro zgyro xmag ymag zmag" << endl;
     fp_gps << "GCS_time timestamp fix_type lat lon alt eph epv vel cog satellites_visible" << endl;
     fp_pressure << "GCS_time time_boot press_abs press_diff temperature" << endl;
-
 
     while (!_done)
     {
