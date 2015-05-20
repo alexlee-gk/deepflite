@@ -15,7 +15,7 @@ else()
 	message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-find_package(Boost COMPONENTS system thread program_options date_time REQUIRED)
+find_package(Boost COMPONENTS system thread program_options date_time filesystem REQUIRED)
 find_package(Eigen REQUIRED)
 find_package(OpenCV REQUIRED)
 
