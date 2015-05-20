@@ -1,17 +1,12 @@
 #include <iostream>
-#include <stdio.h>
 #include <vector>
 #include <string>
-#include <sys/time.h>
 
 #include "boost/program_options.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/thread.hpp"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
-#include <libv4l2.h>
-#include <linux/videodev2.h>
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -27,39 +22,6 @@ using namespace std;
 namespace po = boost::program_options;
 namespace ptime = boost::posix_time;
 namespace pt = boost::property_tree;
-
-void setupCameraSettings(int device_id, int exposure, int gain, int brightness) {
-	// manually setting camera exposure settings; OpenCV/v4l1 doesn't
-	// support exposure control; so here we manually use v4l2 before
-	// opening the device via OpenCV; confirmed to work with Logitech
-	// C270; try exposure=20, gain=100, brightness=150
-
-	string video_str = "/dev/video" + to_string(device_id);
-
-	int device = v4l2_open(video_str.c_str(), O_RDWR | O_NONBLOCK);
-
-	if (exposure >= 0) {
-		// not sure why, but v4l2_set_control() does not work for
-		// V4L2_CID_EXPOSURE_AUTO...
-		struct v4l2_control c;
-		c.id = V4L2_CID_EXPOSURE_AUTO;
-		c.value = 1; // 1=manual, 3=auto; V4L2_EXPOSURE_AUTO fails...
-		if (v4l2_ioctl(device, VIDIOC_S_CTRL, &c) != 0) {
-			cout << "Failed to set... " << strerror(errno) << endl;
-		}
-		cout << "exposure: " << exposure << endl;
-		v4l2_set_control(device, V4L2_CID_EXPOSURE_ABSOLUTE, exposure*6);
-	}
-	if (gain >= 0) {
-		cout << "gain: " << gain << endl;
-		v4l2_set_control(device, V4L2_CID_GAIN, gain*256);
-	}
-	if (brightness >= 0) {
-		cout << "brightness: " << brightness << endl;
-		v4l2_set_control(device, V4L2_CID_BRIGHTNESS, brightness*256);
-	}
-	v4l2_close(device);
-}
 
 void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture* capture, cv::VideoWriter* writter, vector<long>& timestamps) {
 	int i_frame = 0;
@@ -147,7 +109,7 @@ int main(int argc, char* argv[]) {
 		captures.push_back(capture);
 
 		if (output.size()) {
-			string filename = file_prefix + "_video" + boost::lexical_cast<string>(device_ids[i]) + ".avi";
+			string filename = file_prefix + "_video" + to_string(device_ids[i]) + ".avi";
 			cv::VideoWriter writter(filename, CV_FOURCC('M', 'J', 'P', 'G'), fps, cv::Size(width, height), true);
 			if (!writter.isOpened()) {
 				cout << "Cannot open video writter" << endl;
