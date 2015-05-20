@@ -10,4 +10,4 @@ include_directories(
 add_library(camera utils.cpp utils.h)
 
 add_executable(show show.cpp)
-target_link_libraries(show ${Boost_LIBRARIES} ${OpenCV_LIBS} apriltags telemetry mavlink)
+target_link_libraries(show camera ${Boost_LIBRARIES} ${OpenCV_LIBS} apriltags telemetry mavlink)

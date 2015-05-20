@@ -9,9 +9,6 @@
 #include "boost/thread.hpp"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-#include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <libv4l2.h>
 #include <linux/videodev2.h>
@@ -24,6 +21,8 @@
 
 #include "MavlinkInterface.h"
 
+#include "utils.h"
+
 using namespace std;
 namespace po = boost::program_options;
 namespace ptime = boost::posix_time;
@@ -35,7 +34,7 @@ void setupCameraSettings(int device_id, int exposure, int gain, int brightness) 
 	// opening the device via OpenCV; confirmed to work with Logitech
 	// C270; try exposure=20, gain=100, brightness=150
 
-	string video_str = "/dev/video" + boost::lexical_cast<string>(device_id);
+	string video_str = "/dev/video" + to_string(device_id);
 
 	int device = v4l2_open(video_str.c_str(), O_RDWR | O_NONBLOCK);
 
@@ -85,7 +84,7 @@ void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture* captur
 }
 
 int main(int argc, char* argv[]) {
-	vector<int> device_ids;
+	vector<string> ids;
 	int width;
 	int height;
 	double fps;
@@ -96,7 +95,7 @@ int main(int argc, char* argv[]) {
 	po::options_description desc("Allowed options");
 	desc.add_options()
 				("help", "produce help message")
-				("ids", po::value< vector<int> >(&device_ids))
+				("ids", po::value<vector<string> >(&ids), "device or camera ids or camera serial numbers")
 				("width,w", po::value<int>(&width)->default_value(1280))
 				("height,h", po::value<int>(&height)->default_value(720))
 				("fps", po::value<double>(&fps)->default_value(30.0))
@@ -118,11 +117,20 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
+	const int n_cameras = ids.size();
+	vector<int> device_ids;
+	vector<string> camera_ids;
+	for (auto id : ids) {
+		int device_id = getDeviceId(id);
+		device_ids.push_back(device_id);
+		camera_ids.push_back(getCameraIdFromSerialNumber(getCameraSerialNumberFromDeviceId(device_id)));
+	}
+
 	// setup captures and writters
 	vector<cv::VideoCapture> captures;
 	vector<cv::VideoWriter> writters;
 	vector<string> video_filenames;
-	for (int i = 0; i < device_ids.size(); i++) {
+	for (int i = 0; i < n_cameras; i++) {
 		setupCameraSettings(device_ids[i], exposure, gain, brightness);
 		cv::VideoCapture capture(device_ids[i]);
 		if (!capture.isOpened()) {
@@ -135,7 +143,7 @@ int main(int argc, char* argv[]) {
 		captures.push_back(capture);
 
 		if (output.size()) {
-			string filename = output + "video" + boost::lexical_cast<string>(device_ids[i]) + ".avi";
+			string filename = output + "video" + camera_ids[i] + ".avi";
 			cv::VideoWriter writter(filename, CV_FOURCC('M', 'J', 'P', 'G'), fps, cv::Size(width, height), true);
 			if (!writter.isOpened()) {
 				cout << "Cannot open video writter" << endl;
@@ -152,15 +160,14 @@ int main(int argc, char* argv[]) {
 	vector<cv::Mat> frames;
 	vector<vector<string> > timestamps;
 	// reserve space so that reference doesn't change
-	frames.reserve(captures.size());
-	timestamps.reserve(captures.size());
+	frames.reserve(n_cameras);
+	timestamps.reserve(n_cameras);
 	boost::thread_group thread_group;
-	for (int i = 0; i < captures.size(); i++) {
+	for (int i = 0; i < n_cameras; i++) {
 		frames.push_back(cv::Mat(height, width, CV_8UC3));
 		timestamps.push_back(vector<string>());
 		thread_group.add_thread(new boost::thread(captureAndWrite, boost::ref(done), i, boost::ref(frames[i]), &captures[i], (writters.size() > i) ? &writters[i] : NULL, boost::ref(timestamps[i])));
 	}
-
 
     // start capturing telemetry data
     MavlinkInterface mav;
@@ -172,8 +179,8 @@ int main(int argc, char* argv[]) {
 	// main loop for visualization and interactive input
 	AprilTags::TagDetector tag_detector(AprilTags::tagCodes36h11);
 	cv::Mat image, image_gray;
-	int grid_width = (frames.size() < 3) ? 1 : 2;
-	int grid_height = (frames.size() < 2) ? 1 : 2;
+	int grid_width = (n_cameras < 3) ? 1 : 2;
+	int grid_height = (n_cameras < 2) ? 1 : 2;
 	cv::Mat all_image(grid_height*height, grid_width*width, CV_8UC3);
 	cv::namedWindow("image", cv::WINDOW_NORMAL);
 	int max_width = width;
@@ -185,7 +192,7 @@ int main(int argc, char* argv[]) {
 	bool detect = false;
 	char key = (char) 0;
 	while (true) {
-		for (int i = 0; i < frames.size(); i++) {
+		for (int i = 0; i < n_cameras; i++) {
 			frames[i].copyTo(image);
 			if (detect) {
 				// detect April tags (requires a gray scale image)
@@ -193,7 +200,7 @@ int main(int argc, char* argv[]) {
 				detections = tag_detector.extractTags(image_gray);
 
 				// show the current image including any detections
-				BOOST_FOREACH(const AprilTags::TagDetection &detection, detections) {
+				for (auto &detection : detections) {
 					detection.draw(image);
 				}
 			}
@@ -211,10 +218,7 @@ int main(int argc, char* argv[]) {
 			done = true;
 			break;
 		}
-
-                cout << "hello" << endl;
 	}
-
 
 	// stop telemetry
     mav.stop();
@@ -224,23 +228,23 @@ int main(int argc, char* argv[]) {
 	// save metadata
 	if (output.size()) {
 		pt::ptree tree;
-		pt::ptree tvideos;
-		for (int i = 0; i < device_ids.size(); i++) {
-			pt::ptree tvideo;
-			tvideo.put("filename", video_filenames[i]);
+		for (int i = 0; i < n_cameras; i++) {
+			pt::ptree tcamera;
+			tcamera.put("serial_number", getCameraSerialNumberFromId(camera_ids[i]));
+			tcamera.put("video.filename", video_filenames[i]);
 			pt::ptree ttimestamps;
-			BOOST_FOREACH(string &timestamp, timestamps[i]) {
+			for (string &timestamp : timestamps[i]) {
 				pt::ptree ttimestamp;
 				ttimestamp.put("", timestamp);
 				ttimestamps.push_back(make_pair("", ttimestamp));
 			}
-			tvideo.add_child("timestamps", ttimestamps);
-			tvideos.push_back(make_pair("", tvideo));
+			tcamera.add_child("video.timestamps", ttimestamps);
+
+			tree.add_child("cameras." + camera_ids[i], tcamera);
 		}
-		tree.add_child("cameras.videos", tvideos);
 
 		pt::ptree ttimestamps;
-		BOOST_FOREACH(string &timestamp, image_timestamps) {
+		for (string &timestamp : image_timestamps) {
 			pt::ptree ttimestamp;
 			ttimestamp.put("", timestamp);
 			ttimestamps.push_back(make_pair("", ttimestamp));
