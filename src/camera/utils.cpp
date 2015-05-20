@@ -43,6 +43,9 @@ void setupCameraSettings(int device_id, int exposure, int gain, int brightness) 
 }
 
 int getDeviceId(string id) {
+	if (id == "") {
+		throw runtime_error("getDeviceId: id is empty");
+	}
 	int device_id;
 	try {
 		device_id = stoi(id);
@@ -74,7 +77,9 @@ int getDeviceIdFromSerialNumber(string camera_serial_number) {
 					cmd_res += buffer;
 			}
 			pclose(pipe);
-			if (cmd_res.find(camera_serial_number) != string::npos) {
+			int end_pos = cmd_res.rfind("\"");
+			int start_pos = cmd_res.rfind("\"", end_pos-1) + 1;
+			if (!(start_pos == 0 || end_pos == -1) && cmd_res.substr(start_pos, end_pos - start_pos) == camera_serial_number) {
 				device_id = stoi(filename.substr(5));
 				break;
 			}
@@ -124,7 +129,7 @@ string getCameraIdFromSerialNumber(string camera_serial_number) {
 	try {
 		camera_id = map<string, string> {{"EE96593F", "A"}, {"E8FE493F", "B"}}.at(camera_serial_number);
 	} catch (out_of_range& e) {
-		throw invalid_argument("Invalid camera id: " + camera_serial_number);
+		throw invalid_argument("Invalid camera serial number: " + camera_serial_number);
 	}
 	return camera_id;
 }
