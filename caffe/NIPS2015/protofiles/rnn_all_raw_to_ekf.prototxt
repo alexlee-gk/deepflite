@@ -1,0 +1,191 @@
+name: "rnn_state_estimation"
+
+### TRAINING DATA ###
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "data_norm"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/data_norm/h5source_train.txt"
+    batch_size: 1000
+  }
+  include: { phase: TRAIN }
+}
+
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "EKF_norm"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/EKF_norm/h5source_train.txt"
+    batch_size: 1000
+  }
+  include: { phase: TRAIN }
+}
+
+### TEST DATA ###
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "data_norm"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/data_norm/h5source_test.txt"
+    batch_size: 1000
+  }
+  include: { phase: TEST }
+}
+
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "EKF_norm"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/EKF_norm/h5source_test.txt"
+    batch_size: 1000
+  }
+  include: { phase: TEST }
+}
+
+
+
+
+### RNN CLIP ###
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "clip"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/clip/h5source_train.txt"
+    batch_size: 1000
+  }
+}
+
+##
+
+layer {
+   name: "flatten_clip"
+   type: "Flatten"
+   bottom: "clip"
+   top: "clip_flat"
+}
+
+
+######### layer definitions ######### 
+
+
+layer {
+  name: "fc1"
+  type: "InnerProduct"
+  bottom: "data_norm"
+  top: "fc1"
+  param { 
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param { 
+    lr_mult: 1
+    decay_mult: 1
+  }
+  inner_product_param {
+    num_output: 100
+    weight_filler {
+      type: "gaussian"
+      std: 0.1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "fc1"
+  top: "fc1"
+}
+
+layer {
+  name: "reshape"
+  type: "Reshape"
+  bottom: "fc1"
+  top: "fc1_reshape"
+  reshape_param {
+    shape {
+      dim: 1000
+      dim: 1
+      dim: 100
+    }
+  }
+}
+
+
+layer { 
+   name: "rnn"
+   type: "RNN"
+   bottom: "fc1_reshape"
+   bottom: "clip_flat"
+   top: "rnn"
+   param { 
+     lr_mult: 1
+     decay_mult: 1
+   }
+   param { 
+     lr_mult: 1
+     decay_mult: 1
+   }
+   recurrent_param {
+     num_output: 100
+     weight_filler {
+       type: "gaussian"
+       std: 0.1
+     }
+     bias_filler {
+       type: "constant"
+        value: 0
+     }
+   }
+   rnn_param {
+      output_nonlinearity: "ReLU"
+      recurrent_nonlinearity: "ReLU"
+   }
+}
+
+
+
+
+layer {
+  name: "fc_out"
+  type: "InnerProduct"
+  bottom: "rnn"
+  top: "out"
+  param { 
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param { 
+    lr_mult: 1
+    decay_mult: 1
+  }
+  inner_product_param {
+    num_output: 9
+    weight_filler {
+      type: "gaussian"
+      std: 0.2
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+
+
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "out"
+  bottom: "EKF_norm"
+  top: "loss"
+}

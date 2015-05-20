@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <string>
+#include <map>
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -9,11 +10,11 @@ int getDeviceId(string id) {
 	int device_id;
 	try {
 		device_id = stoi(id);
-	} catch (invalid_argument e) {
+	} catch (invalid_argument& e) {
 		string camera_serial_number;
 		try {
 			camera_serial_number = getCameraSerialNumberFromId(id);
-		} catch (invalid_argument esn) {
+		} catch (invalid_argument& esn) {
 			camera_serial_number = id;
 		}
 		device_id = getDeviceIdFromSerialNumber(camera_serial_number);
@@ -49,7 +50,7 @@ int getDeviceIdFromSerialNumber(string camera_serial_number) {
 	return device_id;
 }
 
-string getSerialNumberFromDeviceId(int device_id) {
+string getCameraSerialNumberFromDeviceId(int device_id) {
 	string path_name = "/dev/video" + to_string(device_id);
 	if (!boost::filesystem::exists(path_name)) {
 		throw runtime_error("Camera with device id " + to_string(device_id) + " could not be found");
@@ -74,12 +75,20 @@ string getSerialNumberFromDeviceId(int device_id) {
 
 string getCameraSerialNumberFromId(string camera_id) {
 	string camera_serial_number;
-	if (camera_id == "A") {
-		camera_serial_number = "EE96593F";
-	} else if (camera_id == "B") {
-		camera_serial_number = "E8FE493F";
-	} else {
+	try {
+		camera_serial_number = map<string, string> {{"A", "EE96593F"}, {"B", "E8FE493F"}}.at(camera_id);
+	} catch (out_of_range& e) {
 		throw invalid_argument("Invalid camera id: " + camera_id);
 	}
 	return camera_serial_number;
+}
+
+string getCameraIdFromSerialNumber(string camera_serial_number) {
+	string camera_id;
+	try {
+		camera_id = map<string, string> {{"EE96593F", "A"}, {"E8FE493F", "B"}}.at(camera_serial_number);
+	} catch (out_of_range& e) {
+		throw invalid_argument("Invalid camera id: " + camera_serial_number);
+	}
+	return camera_id;
 }

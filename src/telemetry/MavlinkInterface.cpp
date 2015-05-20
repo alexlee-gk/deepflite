@@ -8,7 +8,9 @@ MavlinkInterface::MavlinkInterface(){
 MavlinkInterface::~MavlinkInterface(){}
 
 
-void MavlinkInterface::start(string uart_name, int baudrate){
+void MavlinkInterface::start(string uart_name, int baudrate, string file_prefix){
+    _file_prefix = file_prefix;
+
 
     cout << "Mavlink: Open serial port" << endl;
 
@@ -103,6 +105,7 @@ void MavlinkInterface::read_message() {
 
     // don't handle messages here. Just queue them.
     _msgs.push(message);
+    _timestamps.push(get_timestamp());
 //    cout << "Received message id " << message.msgid << endl;
     if(_debug)
         printf("Received message id %i\n", message.msgid);
@@ -151,36 +154,18 @@ void MavlinkInterface::read_messages_thread() {
 void MavlinkInterface::write_file_thread() {
 
     // current time string
-    time_t now = time(0);
-    struct tm tstruct;
-    char datebuf[100];
-    tstruct  = *localtime(&now);
-    strftime(datebuf, sizeof(datebuf), "%Y-%m-%d-%H.%M.%S", &tstruct);
 
-
-    char fileprefix[100];
-    strcpy(fileprefix, "./data/");
-    strcat(fileprefix, datebuf);
-
-    char imufilename[100];
-    char gpsfilename[100];
-    char pressurefilename[100];
-
-    strcat(strcpy(imufilename, fileprefix), "_IMU.txt");
-    strcat(strcpy(gpsfilename, fileprefix), "_GPS.txt");
-    strcat(strcpy(pressurefilename, fileprefix), "_pressure.txt");
+    string file_name = _file_prefix;
 
     ofstream fp_imu, fp_gps, fp_pressure;
-    fp_imu.open(imufilename);
-    fp_gps.open(gpsfilename);
-    fp_pressure.open(pressurefilename);
-
+    fp_imu.open((file_name + "_IMU.log").c_str());
+    fp_gps.open((file_name + "_GPS.log").c_str());
+    fp_pressure.open((file_name + "_barometer.log").c_str());
 
     // write the header
     fp_imu << "GCS_time timestamp xacc yacc zacc xgyro ygyro zgyro xmag ymag zmag" << endl;
     fp_gps << "GCS_time timestamp fix_type lat lon alt eph epv vel cog satellites_visible" << endl;
     fp_pressure << "GCS_time time_boot press_abs press_diff temperature" << endl;
-
 
     while (!_done)
     {
@@ -193,7 +178,7 @@ void MavlinkInterface::write_file_thread() {
                 case MAVLINK_MSG_ID_RAW_IMU:
                     mavlink_raw_imu_t msg_imu;
                     mavlink_msg_raw_imu_decode(&_msgs.front(), &(msg_imu));
-                    fp_imu << get_timestamp() << " " << msg_imu.time_usec << " "
+                    fp_imu << _timestamps.front() << " " << msg_imu.time_usec << " "
                            << msg_imu.xacc  << " " << msg_imu.yacc  << " " << msg_imu.zacc  << " "
                            << msg_imu.xgyro << " " << msg_imu.ygyro << " " << msg_imu.zgyro << " "
                            << msg_imu.xmag  << " " << msg_imu.ymag  << " " << msg_imu.zmag  << endl;
@@ -201,7 +186,7 @@ void MavlinkInterface::write_file_thread() {
                 case MAVLINK_MSG_ID_GPS_RAW_INT:
                     mavlink_gps_raw_int_t msg_gps;
                     mavlink_msg_gps_raw_int_decode(&_msgs.front(), &(msg_gps));
-                    fp_gps << get_timestamp() << " " << msg_gps.time_usec << " " << (uint16_t)msg_gps.fix_type <<  " "
+                    fp_gps << _timestamps.front() << " " << msg_gps.time_usec << " " << (uint16_t)msg_gps.fix_type <<  " "
                            << msg_gps.lat << " " << msg_gps.lon << " " << msg_gps.alt << " "
                            << msg_gps.eph << " " << msg_gps.epv << " " << msg_gps.vel << " "
                            << msg_gps.cog << " " << (uint16_t)msg_gps.satellites_visible << endl;
@@ -209,15 +194,13 @@ void MavlinkInterface::write_file_thread() {
                 case MAVLINK_MSG_ID_SCALED_PRESSURE:
                     mavlink_scaled_pressure_t msg_p;
                     mavlink_msg_scaled_pressure_decode(&_msgs.front(), &msg_p);
-                    fp_pressure << get_timestamp() << " " << msg_p.time_boot_ms << " " << msg_p.press_abs << " "
+                    fp_pressure << _timestamps.front()<< " " << msg_p.time_boot_ms << " " << msg_p.press_abs << " "
                                 << msg_p.press_diff << " " << msg_p.temperature << endl;
                     break;
             }
             _msgs.pop();
-
-
+            _timestamps.pop();
         }
-
 
 
         usleep(1000000); // write cycle 1Hz

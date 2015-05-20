@@ -61,13 +61,14 @@ void setupCameraSettings(int device_id, int exposure, int gain, int brightness) 
 	v4l2_close(device);
 }
 
-void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture* capture, cv::VideoWriter* writter, vector<string>& timestamps) {
+void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture* capture, cv::VideoWriter* writter, vector<long>& timestamps) {
 	int i_frame = 0;
 	ptime::ptime last_t, t;
 	last_t = ptime::microsec_clock::local_time();
 	while (!done) {
 		(*capture) >> frame;
-		string timestamp = to_iso_extended_string(ptime::microsec_clock::local_time());
+        long timestamp = get_timestamp();
+
 		if (writter) {
 			(*writter) << frame;
 		}
@@ -130,6 +131,7 @@ int main(int argc, char* argv[]) {
 	vector<cv::VideoCapture> captures;
 	vector<cv::VideoWriter> writters;
 	vector<string> video_filenames;
+	string file_prefix = output + to_iso_extended_string(ptime::second_clock::local_time());
 	for (int i = 0; i < n_cameras; i++) {
 		setupCameraSettings(device_ids[i], exposure, gain, brightness);
 		cv::VideoCapture capture(device_ids[i]);
@@ -143,7 +145,7 @@ int main(int argc, char* argv[]) {
 		captures.push_back(capture);
 
 		if (output.size()) {
-			string filename = output + "video" + camera_ids[i] + ".avi";
+			string filename = file_prefix + "_video" + boost::lexical_cast<string>(device_ids[i]) + ".avi";
 			cv::VideoWriter writter(filename, CV_FOURCC('M', 'J', 'P', 'G'), fps, cv::Size(width, height), true);
 			if (!writter.isOpened()) {
 				cout << "Cannot open video writter" << endl;
@@ -158,21 +160,22 @@ int main(int argc, char* argv[]) {
 	// start capture and write threads for each camera
 	bool done = false;
 	vector<cv::Mat> frames;
-	vector<vector<string> > timestamps;
+	vector<vector<long> > timestamps;
+
 	// reserve space so that reference doesn't change
 	frames.reserve(n_cameras);
 	timestamps.reserve(n_cameras);
 	boost::thread_group thread_group;
 	for (int i = 0; i < n_cameras; i++) {
 		frames.push_back(cv::Mat(height, width, CV_8UC3));
-		timestamps.push_back(vector<string>());
+		timestamps.push_back(vector<long>());
 		thread_group.add_thread(new boost::thread(captureAndWrite, boost::ref(done), i, boost::ref(frames[i]), &captures[i], (writters.size() > i) ? &writters[i] : NULL, boost::ref(timestamps[i])));
 	}
 
     // start capturing telemetry data
     MavlinkInterface mav;
     int baudrate = 57600;
-    mav.start("/dev/ttyUSB0", baudrate);
+    mav.start("/dev/ttyUSB0", baudrate, file_prefix);
     mav.request_data_stream(MAV_DATA_STREAM_ALL, 0, 0);
     mav.request_data_stream(MAV_DATA_STREAM_RAW_SENSORS, 50, 1);
 
@@ -188,7 +191,7 @@ int main(int argc, char* argv[]) {
 	double scale = min(((double) max_width)/(width*grid_width), ((double) max_height)/(height*grid_height));
 	cv::resizeWindow("image", scale*all_image.cols, scale*all_image.rows);
 	vector<AprilTags::TagDetection> detections;
-	vector<string> image_timestamps;
+	vector<long> image_timestamps;
 	bool detect = false;
 	char key = (char) 0;
 	while (true) {
@@ -206,10 +209,11 @@ int main(int argc, char* argv[]) {
 			}
 			image.copyTo(all_image(cv::Rect((i%grid_width) * width, (i/grid_width) * height, width, height)));
 		}
-		key = (char) cv::waitKey(1);
+                key = (char) cv::waitKey(1);
+
 		cv::imshow("image", all_image);
 		if (key == 'c') {
-			image_timestamps.push_back(to_iso_extended_string(ptime::microsec_clock::local_time()));
+            image_timestamps.push_back(get_timestamp());
 		}
 		if (key == 'd') {
 			detect = !detect;
@@ -233,7 +237,7 @@ int main(int argc, char* argv[]) {
 			tcamera.put("serial_number", getCameraSerialNumberFromId(camera_ids[i]));
 			tcamera.put("video.filename", video_filenames[i]);
 			pt::ptree ttimestamps;
-			for (string &timestamp : timestamps[i]) {
+			for (long &timestamp : timestamps[i]) {
 				pt::ptree ttimestamp;
 				ttimestamp.put("", timestamp);
 				ttimestamps.push_back(make_pair("", ttimestamp));
@@ -244,14 +248,14 @@ int main(int argc, char* argv[]) {
 		}
 
 		pt::ptree ttimestamps;
-		for (string &timestamp : image_timestamps) {
+		for (long &timestamp : image_timestamps) {
 			pt::ptree ttimestamp;
 			ttimestamp.put("", timestamp);
 			ttimestamps.push_back(make_pair("", ttimestamp));
 		}
 		tree.add_child("cameras.image_timestamps", ttimestamps);
 
-		pt::write_json(output + "info.json", tree);
+		pt::write_json(file_prefix + "_info.json", tree);
 	}
 
 	return 0;
