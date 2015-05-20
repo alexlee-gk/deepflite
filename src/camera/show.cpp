@@ -93,6 +93,7 @@ int main(int argc, char* argv[]) {
 	int gain;
 	int brightness;
 	string output;
+	bool telemetry;
 	po::options_description desc("Allowed options");
 	desc.add_options()
 				("help", "produce help message")
@@ -104,6 +105,7 @@ int main(int argc, char* argv[]) {
 				("gain", po::value<int>(&gain)->default_value(-1))
 				("brightness", po::value<int>(&brightness)->default_value(-1))
 				("output,o", po::value<string>(&output), "base name for output files")
+				("telemetry,t", po::value<bool>(&telemetry)->default_value(true), "Use telemetry")
 				;
 	po::positional_options_description p;
 	p.add("ids", -1);
@@ -174,10 +176,12 @@ int main(int argc, char* argv[]) {
 
     // start capturing telemetry data
     MavlinkInterface mav;
-    int baudrate = 57600;
-    mav.start("/dev/ttyUSB0", baudrate, file_prefix);
-    mav.request_data_stream(MAV_DATA_STREAM_ALL, 0, 0);
-    mav.request_data_stream(MAV_DATA_STREAM_RAW_SENSORS, 50, 1);
+    if (telemetry) {
+		int baudrate = 57600;
+		mav.start("/dev/ttyUSB0", baudrate, file_prefix);
+		mav.request_data_stream(MAV_DATA_STREAM_ALL, 0, 0);
+		mav.request_data_stream(MAV_DATA_STREAM_RAW_SENSORS, 50, 1);
+    }
 
 	// main loop for visualization and interactive input
 	AprilTags::TagDetector tag_detector(AprilTags::tagCodes36h11);
@@ -225,7 +229,9 @@ int main(int argc, char* argv[]) {
 	}
 
 	// stop telemetry
-    mav.stop();
+	if (telemetry) {
+		mav.stop();
+	}
 
 	thread_group.join_all();
 
