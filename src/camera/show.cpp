@@ -7,6 +7,7 @@
 #include "boost/thread.hpp"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/filesystem.hpp>
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -22,6 +23,7 @@ using namespace std;
 namespace po = boost::program_options;
 namespace ptime = boost::posix_time;
 namespace pt = boost::property_tree;
+namespace fs = boost::filesystem;
 
 void captureAndWrite(bool& done, int i, cv::Mat& frame, cv::VideoCapture* capture, cv::VideoWriter* writter, vector<long>& timestamps) {
 	int i_frame = 0;
@@ -117,7 +119,7 @@ int main(int argc, char* argv[]) {
 			}
 			writters.push_back(writter);
 
-			video_filenames.push_back(filename);
+			video_filenames.push_back(fs::path(filename).filename().string());
 		}
 	}
 
