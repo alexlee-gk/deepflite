@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
 	vector<cv::VideoCapture> captures;
 	vector<cv::VideoWriter> writters;
 	vector<string> video_filenames;
-	string file_prefix = output + to_iso_extended_string(ptime::second_clock::local_time());
+	string file_prefix = output + to_iso_string(ptime::second_clock::local_time());
 	for (int i = 0; i < n_cameras; i++) {
 		setupCameraSettings(device_ids[i], exposure, gain, brightness);
 		cv::VideoCapture capture(device_ids[i]);
