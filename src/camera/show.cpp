@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
 		captures.push_back(capture);
 
 		if (output.size()) {
-			string filename = file_prefix + "_video" + to_string(device_ids[i]) + ".avi";
+			string filename = file_prefix + "_video" + camera_ids[i] + ".avi";
 			cv::VideoWriter writter(filename, CV_FOURCC('M', 'J', 'P', 'G'), fps, cv::Size(width, height), true);
 			if (!writter.isOpened()) {
 				cout << "Cannot open video writter" << endl;
@@ -214,14 +214,6 @@ int main(int argc, char* argv[]) {
 
 			tree.add_child("cameras." + camera_ids[i], tcamera);
 		}
-
-		pt::ptree ttimestamps;
-		for (long &timestamp : image_timestamps) {
-			pt::ptree ttimestamp;
-			ttimestamp.put("", timestamp);
-			ttimestamps.push_back(make_pair("", ttimestamp));
-		}
-		tree.add_child("cameras.image_timestamps", ttimestamps);
 
 		pt::write_json(file_prefix + "_info.json", tree);
 	}
