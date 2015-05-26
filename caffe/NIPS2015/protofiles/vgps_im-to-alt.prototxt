@@ -1,0 +1,268 @@
+name: "extract_image_features"
+
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "im_rand_split100"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/caffe/im_rand_split100/h5source_train.txt"
+    batch_size: 30
+  }
+  include: { phase: TRAIN }
+}
+
+
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "EKF_alt_norm_rand_split100"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/caffe/EKF_alt_norm_rand_split100/h5source_train.txt"
+    batch_size: 30
+  }
+  include: { phase: TRAIN }
+}
+
+
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "im_rand_split100"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/caffe/im_rand_split100/h5source_test.txt"
+    batch_size: 30
+  }
+  include: { phase: TEST }
+}
+
+
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "EKF_alt_norm_rand_split100"
+  hdf5_data_param {
+    source: "/media/data__/tuomas/NIPS2015/caffe/EKF_alt_norm_rand_split100/h5source_test.txt"
+    batch_size: 30
+  }
+  include: { phase: TEST }
+}
+
+
+
+
+######### layer definitions ######### 
+
+layer {
+  name: "conv1/7x7_s2"
+  type: "Convolution"
+  bottom: "im_rand_split100"
+  top: "conv1"
+  param {
+    lr_mult: 1
+    decay_mult: 2
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 64
+    kernel_size: 7
+    stride: 2
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "conv1"
+  top: "conv1"
+}
+
+
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "conv1"
+  top: "conv2"
+  param {
+    lr_mult: 1
+    decay_mult: 2
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 32
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "relu2"
+  type: "ReLU"
+  bottom: "conv2"
+  top: "conv2"
+}
+layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "conv2"
+  top: "conv3"
+  param {
+    lr_mult: 1
+    decay_mult: 2
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 64
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "relu3"
+  type: "ReLU"
+  bottom: "conv3"
+  top: "conv3"
+}
+layer {
+  name: "softmax"
+  type: "SpatialSoftmax"
+  bottom: "conv3"
+  top: "image_out"
+  spatial_softmax_param {
+   engine: CAFFE
+    temperature: 1
+  }
+}
+layer {
+  name: "fc_images"
+  type: "InnerProduct"
+  bottom: "image_out"
+  top: "image_features"
+ param { 
+    lr_mult: 0
+   decay_mult: 0
+  }
+  param { 
+    lr_mult: 0
+    decay_mult: 0
+ }
+  inner_product_param {
+    num_output: 2 
+    axis: -2
+    weight_filler {
+     type: "expectation"
+     expectation_option: "xy"
+#     width: 117
+#     height: 53
+     width: 117
+     height: 61
+
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+ }
+}
+
+############## IP LAYERS
+
+layer {
+  name: "fc1"
+  type: "InnerProduct"
+  bottom: "image_features"
+  top: "fc1"
+  param { 
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param { 
+    lr_mult: 2
+    decay_mult: 1
+  }
+  inner_product_param {
+    num_output: 40
+    weight_filler {
+      type: "gaussian"
+      std: 0.1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "fc1"
+  top: "fc1"
+}
+
+#### OUTPUT
+
+layer {
+  name: "out"
+  type: "InnerProduct"
+  bottom: "fc1"
+  top: "out"
+  param { 
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param { 
+    lr_mult: 2
+    decay_mult: 1
+  }
+  inner_product_param {
+    num_output: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+
+
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "out"
+  bottom: "EKF_alt_norm_rand_split100"
+  top: "loss"
+}
