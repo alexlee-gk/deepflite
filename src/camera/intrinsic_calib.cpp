@@ -196,7 +196,8 @@ int main(int argc, char* argv[]) {
 		tcamera.put("camera_matrix", camera_matrix_eigen.format(matrix_format));
 		tcamera.put("dist_coeffs", dist_coeffs_eigen.format(matrix_format));
 		tree.add_child("cameras." + camera_id, tcamera);
-		pt::write_json(cout, tree);
+//		pt::write_json(cout, tree);
+		pt::write_json(output + "intrinsic_calib.json", tree);
 	}
 
 	return 0;
