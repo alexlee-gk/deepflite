@@ -7,11 +7,11 @@
 
 #include <iostream>
 #include <fstream>
-#include <boost/thread.hpp>
 #include <queue>
 
-using namespace std;
+#include <boost/thread.hpp>
 
+using namespace std;
 
 
 
@@ -20,7 +20,7 @@ public:
     MavlinkInterface();
     ~MavlinkInterface();
 
-    void start(string uart_name, int baudrate);
+    void start(string uart_name, int baudrate, string file_prefix);
     void stop();
     void request_data_stream(uint8_t stream_id, uint16_t rate, uint8_t start_stop);
     int write_message(mavlink_message_t msg);
@@ -38,11 +38,14 @@ private:
 
 
     queue<mavlink_message_t> _msgs;
+    queue<long> _timestamps;
     bool _done;
     bool _debug;
 
     int _system_id;
 	int _component_id;
+
+    string _file_prefix;
 
 };
 

@@ -7,5 +7,13 @@ include_directories(
   ${mavlink_INCLUDE_DIRS}
 )
 
+add_library(camera utils.cpp utils.h)
+
 add_executable(show show.cpp)
-target_link_libraries(show ${Boost_LIBRARIES} ${OpenCV_LIBS} apriltags telemetry mavlink)
+target_link_libraries(show camera ${Boost_LIBRARIES} ${OpenCV_LIBS} apriltags telemetry mavlink)
+
+add_executable(intrinsic_calib intrinsic_calib.cpp)
+target_link_libraries(intrinsic_calib camera ${Boost_LIBRARIES} ${OpenCV_LIBS} apriltags)
+
+add_executable(compute_pose compute_pose.cpp)
+target_link_libraries(compute_pose camera ${Boost_LIBRARIES} ${OpenCV_LIBS} apriltags)
