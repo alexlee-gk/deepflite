@@ -254,14 +254,14 @@ macro(pods_use_pkg_config_packages target)
     execute_process(COMMAND 
         ${PKG_CONFIG_EXECUTABLE} --cflags-only-I ${ARGN}
         OUTPUT_VARIABLE _pods_pkg_include_flags)
-    string(STRIP ${_pods_pkg_include_flags} _pods_pkg_include_flags)
+    string(STRIP "${_pods_pkg_include_flags}" _pods_pkg_include_flags)
     string(REPLACE "-I" "" _pods_pkg_include_flags "${_pods_pkg_include_flags}")
 	separate_arguments(_pods_pkg_include_flags)
     #    message("include: ${_pods_pkg_include_flags}")
     execute_process(COMMAND 
         ${PKG_CONFIG_EXECUTABLE} --libs ${ARGN}
         OUTPUT_VARIABLE _pods_pkg_ldflags)
-    string(STRIP ${_pods_pkg_ldflags} _pods_pkg_ldflags)
+    string(STRIP "${_pods_pkg_ldflags}" _pods_pkg_ldflags)
     #    message("ldflags: ${_pods_pkg_ldflags}")
     include_directories(${_pods_pkg_include_flags})
     target_link_libraries(${target} ${_pods_pkg_ldflags})
